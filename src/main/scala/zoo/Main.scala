@@ -22,6 +22,8 @@ case class Animal(name:String, hostPort:String,
     mutex.synchronized {
       // Простая реакция - вывод на экран события
       println(s"Event from keeper: ${event.getType}")
+      // Добавленная строка чтобы все работало
+      mutex.notify()
     }
   }
 
@@ -29,13 +31,17 @@ case class Animal(name:String, hostPort:String,
   def enter():Boolean = {
     // код создания узла и ожидания у барьера
     // создание эфимерного узла
+
+
     zk.create(animalPath, Array.emptyByteArray,
       ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL)
 
+    println("Создан эфимерный узел:" + animalPath);
     // Блок, ожидающий появления в корневом узле /zoo всех животных
     mutex.synchronized {
       while (true) {
         val party = zk.getChildren(root, this)
+        println("Размер группы:"+party.size())
         if (party.size() < partySize) {
           println("Waiting for the others.")
           mutex.wait()
@@ -50,6 +56,7 @@ case class Animal(name:String, hostPort:String,
 
   // метод удаления эфимерного узла
   def leave():Unit = {
+    println("Удален узел: " + animalPath);
     zk.delete(animalPath,-1)
     println("Deleted")
   }
@@ -59,7 +66,7 @@ case class Animal(name:String, hostPort:String,
 
 object Main {
 
-  val sleepTime = 100
+  val sleepTime = 1
 
   def main(args: Array[String]): Unit = {
     println("Starting animal runner")
